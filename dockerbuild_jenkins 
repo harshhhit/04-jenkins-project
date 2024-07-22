@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+
+    enviroment{
+        DOCKERHUB_CREDENTIALS = 
+        IMAGE_NAME = 'docker_image_name'
+    }
+}
+
+
+    stages{
+        satge('cheackout')
+            steps {
+                // cheackout the code from the repositry
+                git credentialsId: 'git-credential-id', url: "https://your-repositry-url.git"
+            }
+    }
+
+    
+        stage('buld'){
+            steps{
+                script{
+                    //build the docker images
+                    docker.build("${IMAGE_NAME}:latest")
+
+                }
+            }
+        }

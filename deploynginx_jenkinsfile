@@ -1,0 +1,33 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Pull Docker Image') {
+            steps {
+                script {
+                    // Pull the Docker Nginx image
+                    docker.image('nginx').pull()
+                }
+            }
+        }
+        
+        stage('Run Docker Container') {
+            steps {
+                script {
+                    // Run the Docker Nginx container
+                    docker.run('nginx:latest', '-d -p 8080:80')
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Cleanup: Stop and remove the Docker container
+            script {
+                docker.image('nginx').stop()
+                docker.image('nginx').remove()
+            }
+        }
+    }
+}
