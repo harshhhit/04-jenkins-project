@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('e0f468f0-1587-4586-866f-1ae3c2313094')
+        IMAGE_NAME = 'docker-jenkins'
+        DOCKERHUB_USERNAME = 'harshhhit'  // Add your Docker Hub username here
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout the code from the repository
+                git 'https://github.com/harshhhit/test-docker-file.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    // Build the Docker image
+                    docker.build("${IMAGE_NAME}:latest")
+                }
+            }
+        }
+
+        stage('Push') {
+            steps {
+                script {
+                    // Login to Docker Hub using shell commands
+                    withCredentials([usernamePassword(credentialsId: 'e0f468f0-1587-4586-866f-1ae3c2313094', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                        
+                        // Tag the Docker image
+                        sh "docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                        
+                        // Push the Docker image
+                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Cleanup the workspace
+            cleanWs()
+        }
+        success {
+            echo 'Docker image has been successfully pushed to Docker Hub.'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
