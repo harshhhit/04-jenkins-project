@@ -1,0 +1,102 @@
+pipeline {
+    agent any
+ 
+    environment {
+        // Define the Git credentials ID
+        GIT_CREDENTIALS_ID = 'Git credentials ID'
+    }
+ 
+    tools {
+        // Define the Maven tool
+        maven 'Maven'
+    }
+ 
+    stages {
+        stage('Initialization') {
+            steps {
+                // Remove the workspace before each execution
+                deleteDir()
+            }
+        }
+ 
+        stage('Checkout') {
+            steps {
+                // Clone the Git repository with credentials
+                script {
+                    checkout([$class: 'GitSCM',
+                              branches: [[name: 'branch-name']],
+                              doGenerateSubmoduleConfigurations: false,
+                              submoduleCfg: [],
+                              userRemoteConfigs: [[credentialsId: env.GIT_CREDENTIALS_ID, url: 'http:/git-url.git']]])
+                }
+            }
+        }
+ 
+        stage('Build and Test') {
+            steps {
+                // Run Maven clean and verify with Cucumber tags in debug mode
+                script {
+                    sh "mvn test verify -Dcucumber.filter.tags=\"@SkillsetReport\" "
+                }
+            }
+        }
+ 
+        stage('Generate and Archive Allure Report') {
+            steps {
+                // Generate and archive Allure report
+                allure([
+                    includeProperties: false,
+                    jdk: '',
+                    properties: [],
+                    reportBuildPolicy: 'ALWAYS',
+                    results: [[path: 'target/allure-results']]
+                ])
+            }
+        }
+    }
+}
+ 
+ 
+stage('Email Notification') {
+		  steps {
+			script {
+			  def mailRecipients = 'mishrashubham@gmail.com'
+			  def jobName = currentBuild.fullDisplayName
+			  def link = 'repositary url' // Replace with the actual link to the report
+ 
+			  def emailBody
+ 
+			  if (currentBuild.currentResult == 'SUCCESS') {
+				emailBody = """
+<html>
+<body>
+<p>Hello,</p>
+<p>The pipeline build '${jobName}' has completed .</p>
+<p>You can view the report <a href="${link}">here</a>.</p>
+<p>Thank you!</p>
+</body>
+</html>
+				"""
+			  } else {
+				emailBody = """
+<html>
+<body>
+<p>Hello,</p>
+<p>The pipeline build '${jobName}' has completed  </p>
+<p>You can view the report <a href="${link}">here</a>.</p>
+<p>Thank you!</p>
+</body>
+</html>
+				"""
+			  }
+ 
+			  emailext body: emailBody,
+				mimeType: 'text/html',
+				subject: "[Jenkins] Pipeline Build Complete: ${jobName}",
+				to: "${mailRecipients}",
+				replyTo: "",
+				recipientProviders: [[$class: 'CulpritsRecipientProvider']]
+			}
+		  }
+		}
+	  }
